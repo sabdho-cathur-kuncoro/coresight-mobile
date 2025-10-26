@@ -1,10 +1,13 @@
 import 'dart:io';
+import 'package:coresight/blocs/presence/presence_bloc.dart';
 import 'package:coresight/shared/theme.dart';
 import 'package:coresight/ui/widgets/button.dart';
 import 'package:coresight/ui/widgets/header.dart';
 import 'package:coresight/ui/widgets/toast.dart';
 import 'package:coresight/utils/status_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 // import 'package:intl/intl.dart';
 
 class PresencePreviewPage extends StatefulWidget {
@@ -36,15 +39,17 @@ class _PresencePreviewPageState extends State<PresencePreviewPage> {
         ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
     final photoPath = args['photoPath'];
     final type = args['type'];
-    // final LatLng location = args['location'];
+    final LatLng location = args['location'] as LatLng;
     // final String formattedDate = DateFormat('dd-MM-yy').format(DateTime.now());
     // final String formattedTime = DateFormat('hh:mm:ss').format(DateTime.now());
 
     void onSubmit() {
-      GlobalToast.showSuccess(
-        '${type == 1 ? 'Clock In' : 'Clock Out'} successfully!',
+      context.read<PresenceBloc>().add(
+        PresenceRequested(photoPath: photoPath, location: location, type: type),
       );
-      Navigator.popUntil(context, (route) => route.isFirst);
+      // GlobalToast.showSuccess(
+      //   '${type == 1 ? 'Clock In' : 'Clock Out'} successfully!',
+      // );
     }
 
     return Scaffold(
@@ -56,11 +61,24 @@ class _PresencePreviewPageState extends State<PresencePreviewPage> {
         },
       ),
       backgroundColor: lightBackgroundColor,
-      body: Image.file(
-        File(photoPath),
-        width: double.infinity,
-        height: MediaQuery.of(context).size.height * 0.8,
-        fit: BoxFit.cover,
+      body: BlocConsumer<PresenceBloc, PresenceState>(
+        listener: (context, state) {
+          if (state is PresenceFailed) {
+            GlobalToast.showError(state.e);
+          }
+          if (state is PresenceSuccess) {
+            Navigator.popUntil(context, (route) => route.isFirst);
+            GlobalToast.showSuccess(state.msg);
+          }
+        },
+        builder: (context, state) {
+          return Image.file(
+            File(photoPath),
+            width: double.infinity,
+            height: MediaQuery.of(context).size.height * 0.8,
+            fit: BoxFit.cover,
+          );
+        },
       ),
       bottomNavigationBar: SafeArea(
         minimum: const EdgeInsets.only(bottom: 20),
@@ -74,6 +92,9 @@ class _PresencePreviewPageState extends State<PresencePreviewPage> {
                 width: MediaQuery.of(context).size.width / 2.2,
                 child: Button(
                   text: 'Go Back',
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
                   bgColor: Colors.transparent,
                   borderWidth: 1,
                   borderColor: primaryColor,

@@ -41,6 +41,7 @@ TextStyle primaryTextStyle = TextStyle(
   color: primaryColor,
 );
 TextStyle greenTextStyle = TextStyle(fontFamily: 'Inter', color: greenColor);
+TextStyle tealTextStyle = TextStyle(fontFamily: 'Inter', color: tealColor);
 
 FontWeight light = FontWeight.w300;
 FontWeight regular = FontWeight.w400;

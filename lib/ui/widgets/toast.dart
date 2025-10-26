@@ -4,15 +4,14 @@ import 'package:flutter/material.dart';
 enum ToastType { success, error, warning, info }
 
 class GlobalToast {
-  static final GlobalKey<NavigatorState> navigatorKey =
-      GlobalKey<NavigatorState>();
+  static GlobalKey<NavigatorState>? navigatorKey;
 
   static void show({
     required String message,
     required ToastType type,
     Duration duration = const Duration(seconds: 3),
   }) {
-    final overlay = navigatorKey.currentState?.overlay;
+    final overlay = navigatorKey?.currentState?.overlay;
     if (overlay == null) return;
 
     final colors = _getGradient(type);

@@ -3,6 +3,7 @@ import 'package:coresight/shared/theme.dart';
 import 'package:coresight/ui/widgets/button.dart';
 import 'package:coresight/utils/status_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -86,6 +87,9 @@ class _OnboardingPageState extends State<OnboardingPage>
   }
 
   Future<void> _completeOnboarding() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('onboarding_complete', true);
+    if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/signin', (route) => false);
   }
 

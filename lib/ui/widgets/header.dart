@@ -5,12 +5,14 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
   final String title;
   final Color bgColor;
   final VoidCallback? onPressed;
+  final Widget? trailing;
 
   const Header({
     super.key,
     required this.title,
     required this.bgColor,
     required this.onPressed,
+    this.trailing,
   });
 
   @override
@@ -22,30 +24,37 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
       height: statusBarHeight + kToolbarHeight,
       color: bgColor,
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: onPressed,
-            child: Icon(
-              Icons.chevron_left_rounded,
-              size: 32,
-              color: blackColor,
+          Expanded(
+            child: Row(
+              children: [
+                GestureDetector(
+                  onTap: onPressed,
+                  child: Icon(
+                    Icons.chevron_left_rounded,
+                    size: 32,
+                    color: blackColor,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: blackTextStyle.copyWith(
+                    fontSize: h4,
+                    fontWeight: semiBold,
+                    color: blackColor,
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(width: 12),
-          Text(
-            title,
-            style: blackTextStyle.copyWith(
-              fontSize: h4,
-              fontWeight: semiBold,
-              color: blackColor,
-            ),
-          ),
+          if (trailing != null) trailing!,
         ],
       ),
     );
   }
 
-  // ❗ This runs without context, so we estimate status bar height
   @override
   Size get preferredSize => const Size.fromHeight(24 + kToolbarHeight);
 }

@@ -1,46 +1,36 @@
+import 'package:coresight/shared/theme.dart';
 import 'package:flutter/material.dart';
 
 class GlobalLoading {
-  static OverlayEntry? _overlayEntry;
+  static GlobalKey<NavigatorState>? navigatorKey;
+  static OverlayEntry? _loader;
 
-  static void show(BuildContext context, {String? message}) {
-    if (_overlayEntry != null) return; // prevent multiple overlays
+  static void show({String? message}) {
+    if (_loader != null) return;
 
-    _overlayEntry = OverlayEntry(
+    final overlayState = navigatorKey?.currentState?.overlay;
+
+    if (overlayState == null) {
+      debugPrint('⚠️ GlobalLoading: Overlay not ready yet');
+      return;
+    }
+
+    _loader = OverlayEntry(
       builder: (context) => Stack(
         children: [
-          // Dark background overlay
-          Opacity(
-            opacity: 0.5,
-            child: ModalBarrier(dismissible: false, color: Colors.black),
-          ),
-          // Center loading spinner + message
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                ),
-                if (message != null) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    message,
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ],
-              ],
-            ),
-          ),
+          Container(color: Colors.black38),
+          Center(child: CircularProgressIndicator(color: whiteColor)),
         ],
       ),
     );
 
-    Overlay.of(context).insert(_overlayEntry!);
+    overlayState.insert(_loader!);
   }
 
   static void hide() {
-    _overlayEntry?.remove();
-    _overlayEntry = null;
+    try {
+      _loader?.remove();
+    } catch (_) {}
+    _loader = null;
   }
 }
