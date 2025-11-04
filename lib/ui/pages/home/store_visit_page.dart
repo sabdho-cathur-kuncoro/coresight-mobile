@@ -182,7 +182,7 @@ class _StoreVisitPageState extends State<StoreVisitPage> {
                 fontWeight: semiBold,
               ),
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 16),
 
             // Pricing, Stock, SOS
             Padding(

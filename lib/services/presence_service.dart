@@ -68,7 +68,7 @@ class PresenceService {
         throw res.data['message'];
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Clock out failed');
+      throw Exception(e.response?.data['message'] ?? 'Report failed');
     }
   }
 
@@ -95,7 +95,7 @@ class PresenceService {
         throw res.data['message'];
       }
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Clock out failed');
+      throw Exception(e.response?.data['message'] ?? 'Report Detail failed');
     }
   }
 }

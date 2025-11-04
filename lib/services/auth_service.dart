@@ -68,6 +68,7 @@ class AuthService {
       const storage = FlutterSecureStorage();
       await storage.write(key: 'token', value: user.token);
       await storage.write(key: 'deviceId', value: user.deviceId);
+      await storage.write(key: 'name', value: user.name);
       await storage.write(key: 'user_name', value: user.username);
       await storage.write(key: 'password', value: user.password);
       await storage.write(key: 'sales_id', value: user.salesId);

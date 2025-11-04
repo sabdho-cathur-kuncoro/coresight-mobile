@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:coresight/utils/add_watermark.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:image/image.dart' as img;
 import 'package:camera/camera.dart';
 import 'package:coresight/shared/theme.dart';
@@ -18,6 +20,11 @@ class StoreVisitPhotoPage extends StatefulWidget {
 class _StoreVisitPhotoPageState extends State<StoreVisitPhotoPage> {
   late dynamic location;
   late int type;
+  String? userName;
+  late String storeId;
+  late String storeName;
+  late String areaName;
+  late LatLng storeLocation;
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
 
@@ -27,6 +34,10 @@ class _StoreVisitPhotoPageState extends State<StoreVisitPhotoPage> {
     final args = ModalRoute.of(context)!.settings.arguments as Map;
     location = args['location'];
     type = args['type'];
+    storeId = args['storeId'];
+    storeName = args['storeName'];
+    areaName = args['areaName'];
+    storeLocation = args['storeLocation'];
   }
 
   @override
@@ -37,7 +48,17 @@ class _StoreVisitPhotoPageState extends State<StoreVisitPhotoPage> {
       iconBrightness: Brightness.dark,
       barBrightness: Brightness.light,
     );
+    _loadUserData();
     _initCamera();
+  }
+
+  Future<void> _loadUserData() async {
+    const storage = FlutterSecureStorage();
+    final storedName = await storage.read(key: 'name');
+
+    setState(() {
+      userName = storedName ?? '';
+    });
   }
 
   Future<void> _initCamera() async {
@@ -87,7 +108,7 @@ class _StoreVisitPhotoPageState extends State<StoreVisitPhotoPage> {
         'dd-MM-yy HH:mm:ss',
       ).format(DateTime.now());
       final watermark =
-          '${type == 1 ? 'Check In' : 'Check Out'}\n$formattedDate\nJohn Doe\nLat:${location.latitude}, Lon:${location.longitude}';
+          '${type == 1 ? 'Check In' : 'Check Out'} (Store Visit)\n$storeName\n$areaName\n$userName\n$formattedDate\n${location.latitude}, ${location.longitude}';
 
       final watermarkedPath = await addWatermark(
         photoPath: mirroredPath,
@@ -108,6 +129,11 @@ class _StoreVisitPhotoPageState extends State<StoreVisitPhotoPage> {
           'photoPath': watermarkedPath,
           'location': location,
           'type': type,
+          'storeLocation': storeLocation,
+          'storeId': storeId,
+          'storeName': storeName,
+          'areaName': areaName,
+          'date': formattedDate
         },
       );
     } catch (e) {

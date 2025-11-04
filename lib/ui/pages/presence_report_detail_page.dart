@@ -1,4 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+
+// import 'package:cached_network_image/cached_network_image.dart';
 import 'package:coresight/blocs/presence_detail/presence_detail_bloc.dart';
 import 'package:coresight/shared/theme.dart';
 import 'package:coresight/ui/widgets/header.dart';
@@ -34,48 +37,6 @@ class _PresenceReportDetailPageState extends State<PresenceReportDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 👇 Get arguments from Navigator
-    // final args =
-    //     ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-
-    // final String employeeName = args['employeeName'] ?? '';
-    // final String date = args['date'] ?? '';
-    // final String clockInTime = args['clockInTime'] ?? '';
-    // final String clockOutTime = args['clockOutTime'] ?? '';
-    // final String clockInPhoto = args['clockInPhoto'] ?? '';
-    // final String clockOutPhoto = args['clockOutPhoto'] ?? '';
-    // final LatLng? clockInLocation = args['clockInLocation'];
-    // final LatLng? clockOutLocation = args['clockOutLocation'];
-
-    // Collect markers
-    // final Set<Marker> markers = {};
-    // if (clockInLocation != null) {
-    //   markers.add(
-    //     Marker(
-    //       markerId: const MarkerId("clockIn"),
-    //       position: clockInLocation,
-    //       infoWindow: const InfoWindow(title: "Clock In Location"),
-    //       icon: BitmapDescriptor.defaultMarkerWithHue(
-    //         BitmapDescriptor.hueGreen,
-    //       ),
-    //     ),
-    //   );
-    // }
-    // if (clockOutLocation != null) {
-    //   markers.add(
-    //     Marker(
-    //       markerId: const MarkerId("clockOut"),
-    //       position: clockOutLocation,
-    //       infoWindow: const InfoWindow(title: "Clock Out Location"),
-    //       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-    //     ),
-    //   );
-    // }
-
-    // Default center for map → use clockIn first, else clockOut, else 0,0
-    // final LatLng initialPosition =
-    //     clockInLocation ?? clockOutLocation ?? const LatLng(0, 0);
-
     return Scaffold(
       appBar: Header(
         title: 'Presence Report Detail',
@@ -159,7 +120,8 @@ class _PresenceReportDetailPageState extends State<PresenceReportDetailPage> {
                 width: MediaQuery.of(context).size.width,
                 padding: EdgeInsets.symmetric(horizontal: 16, vertical: 20),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: strokeColor),
                   color: whiteColor,
                 ),
                 child: Column(
@@ -255,13 +217,13 @@ class _PresenceReportDetailPageState extends State<PresenceReportDetailPage> {
                           width: MediaQuery.of(context).size.width / 2.5,
                           height: 250,
                           decoration: BoxDecoration(),
-                          child: _buildPhoto(incomingUrlPhoto ?? ''),
+                          child: _buildPhoto(incomingUrlPhoto),
                         ),
                         Container(
                           height: 250,
                           width: MediaQuery.of(context).size.width / 2.5,
                           decoration: BoxDecoration(),
-                          child: _buildPhoto(repeatUrlPhoto ?? ''),
+                          child: _buildPhoto(repeatUrlPhoto),
                         ),
                       ],
                     ),
@@ -336,30 +298,60 @@ class _PresenceReportDetailPageState extends State<PresenceReportDetailPage> {
     );
   }
 
-  Widget _buildPhoto(String path) {
-    if (path.isEmpty) {
+  Widget _buildPhoto(String? path) {
+    // If the path is null or empty → show placeholder
+    if (path == null || path.isEmpty) {
       return Container(
         decoration: BoxDecoration(
           color: Colors.grey[300],
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Icon(Icons.image_not_supported, color: whiteColor, size: 40),
+        child: const Icon(
+          Icons.image_not_supported,
+          color: Colors.white,
+          size: 40,
+        ),
       );
     }
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(8),
-      child: CachedNetworkImage(
-        imageUrl: path,
-        placeholder: (context, url) => SizedBox(
-          width: 32,
-          height: 32,
-          child: Center(child: const CircularProgressIndicator()),
+    try {
+      // Clean base64 string if it contains a prefix
+      final String cleanedBase64 = path.contains(',')
+          ? path.split(',')[1]
+          : path;
+
+      // Decode the base64 safely
+      final Uint8List bytes = base64Decode(cleanedBase64);
+
+      // Display image
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              decoration: BoxDecoration(
+                color: greyColor,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Icon(
+                Icons.broken_image,
+                color: whiteColor,
+                size: 40,
+              ),
+            );
+          },
         ),
-        errorWidget: (context, url, error) =>
-            SizedBox(width: 50, child: Center(child: const Icon(Icons.error))),
-        fit: BoxFit.cover,
-      ),
-    );
+      );
+    } catch (e) {
+      return Container(
+        decoration: BoxDecoration(
+          color: greyColor,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(Icons.broken_image, color: whiteColor, size: 40),
+      );
+    }
   }
 }

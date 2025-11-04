@@ -18,7 +18,7 @@ Future<String> addWatermark({
   final lines = watermarkText.split('\n');
 
   // Padding from left and bottom
-  const int paddingX = 32;
+  const int paddingX = 48;
   const int paddingBottom = 48;
 
   // Approx line height for arial24 (safe value). You can tweak if needed.

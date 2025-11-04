@@ -2,6 +2,8 @@ import 'package:coresight/blocs/auth/auth_bloc.dart';
 import 'package:coresight/blocs/dashboard/dashboard_bloc.dart';
 import 'package:coresight/blocs/presence/presence_bloc.dart';
 import 'package:coresight/blocs/presence_detail/presence_detail_bloc.dart';
+import 'package:coresight/blocs/product/product_bloc.dart';
+import 'package:coresight/blocs/store_visit/store_visit_bloc.dart';
 import 'package:coresight/blocs/user/user_bloc.dart';
 import 'package:coresight/navigation/route_tracker.dart';
 import 'package:coresight/shared/theme.dart';
@@ -65,8 +67,6 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  // static final GlobalKey<NavigatorState> navigatorKey =
-  //     GlobalKey<NavigatorState>();
   const MyApp({super.key});
 
   @override
@@ -80,6 +80,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => PresenceBloc()),
         BlocProvider(create: (context) => PresenceDetailBloc()),
         BlocProvider(create: (context) => DashboardBloc()),
+        BlocProvider(create: (context) => StoreVisitBloc()),
+        BlocProvider(create: (context) => ProductBloc()),
       ],
       child: MaterialApp(
         navigatorKey: globalNavigatorKey,

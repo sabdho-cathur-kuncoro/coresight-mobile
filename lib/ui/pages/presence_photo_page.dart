@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:coresight/utils/add_watermark.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:image/image.dart' as img;
 import 'package:camera/camera.dart';
 import 'package:coresight/shared/theme.dart';
@@ -18,6 +19,7 @@ class PresencePhotoPage extends StatefulWidget {
 class _PresencePhotoPageState extends State<PresencePhotoPage> {
   late dynamic location;
   late int type;
+  String? userName;
   CameraController? _controller;
   Future<void>? _initializeControllerFuture;
 
@@ -37,7 +39,17 @@ class _PresencePhotoPageState extends State<PresencePhotoPage> {
       iconBrightness: Brightness.dark,
       barBrightness: Brightness.light,
     );
+    _loadUserData();
     _initCamera();
+  }
+
+  Future<void> _loadUserData() async {
+    const storage = FlutterSecureStorage();
+    final storedName = await storage.read(key: 'name');
+
+    setState(() {
+      userName = storedName ?? '';
+    });
   }
 
   Future<void> _initCamera() async {
@@ -87,7 +99,7 @@ class _PresencePhotoPageState extends State<PresencePhotoPage> {
         'dd-MM-yy HH:mm:ss',
       ).format(DateTime.now());
       final watermark =
-          '${type == 1 ? 'Clock In' : 'Clock Out'}\n$formattedDate\nJohn Doe\nLat:${location.latitude}, Lon:${location.longitude}';
+          '${type == 1 ? 'Clock In' : 'Clock Out'}\n$userName\n$formattedDate\n${location.latitude}, ${location.longitude}';
 
       final watermarkedPath = await addWatermark(
         photoPath: mirroredPath,

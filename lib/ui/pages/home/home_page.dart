@@ -1,6 +1,8 @@
 import 'package:coresight/blocs/auth/auth_bloc.dart';
 import 'package:coresight/blocs/dashboard/dashboard_bloc.dart';
+import 'package:coresight/models/store_visit_model.dart';
 import 'package:coresight/shared/theme.dart';
+import 'package:coresight/ui/widgets/donut_chart_shimmer.dart';
 import 'package:coresight/utils/status_bar.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +29,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  int? touchedIndex;
-
   @override
   void initState() {
     super.initState();
@@ -40,151 +40,158 @@ class _HomePageState extends State<HomePage> {
     context.read<DashboardBloc>().add(DashboardFetch());
   }
 
-  final List<_ChartSection> data = [
-    _ChartSection(label: 'Done', value: 25, color: tealColor),
-    _ChartSection(label: 'To Do', value: 75, color: strokeColor),
-  ];
-
-  int get totalValue => data.fold(0, (sum, item) => sum + item.value);
   @override
   Widget build(BuildContext context) {
     final String formattedDate = DateFormat(
       'EEEE, MMMM d yyyy',
     ).format(DateTime.now());
 
-    Widget donutChart() {
-      return Column(
-        children: [
-          const SizedBox(height: 10),
+    Widget donutChart(StoreVisitModel? storeVisit) {
+      if (storeVisit == null) {
+        return DonutChartShimmer();
+      }
+      final int totalVisit = int.tryParse(storeVisit.totalVisit) ?? 0;
+      final int targetVisit = int.tryParse(storeVisit.targetVisit) ?? 0;
 
-          // === Donut Chart ===
-          SizedBox(
-            height: 100, // changing this value to test resizing
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final width = constraints.maxWidth;
-                final height = constraints.maxHeight;
-                final size = width < height ? width : height;
+      // Progress math
+      final int done = totalVisit.clamp(0, targetVisit);
+      final int remaining = (targetVisit - done).clamp(0, targetVisit);
+      final int percent = targetVisit == 0
+          ? 0
+          : ((done / targetVisit) * 100).clamp(0, 100).round();
 
-                final reversedData = data.reversed.toList();
+      // 1) Data for the CHART (Target becomes 0 when complete)
+      final List<_ChartSection> chartData = [
+        _ChartSection(label: 'Done', value: done, color: tealColor),
+        _ChartSection(label: 'Target', value: remaining, color: strokeColor),
+      ];
 
-                // Radius values based on size
-                final baseRadius = size / 4; // Smaller = thinner ring
-                final touchedRadius = size / 3;
-                final centerRadius = size / 3; // Bigger = thinner ring
+      // 2) Data for the LEGEND (always show the real target value)
+      final List<_ChartSection> legendData = [
+        _ChartSection(label: 'Done', value: done, color: tealColor),
+        _ChartSection(label: 'Target', value: targetVisit, color: strokeColor),
+      ];
 
-                return Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    PieChart(
-                      PieChartData(
-                        centerSpaceRadius: centerRadius,
-                        sectionsSpace: 2,
-                        startDegreeOffset: -90,
-                        pieTouchData: PieTouchData(
-                          touchCallback: (event, response) {
-                            try {
-                              setState(() {
-                                final index = response
-                                    ?.touchedSection
-                                    ?.touchedSectionIndex;
-                                touchedIndex = (index != null && index >= 0)
-                                    ? index
-                                    : null;
-                              });
-                            } catch (e) {
-                              print('Touch error: $e');
-                            }
-                          },
-                        ),
-                        sections: List.generate(data.length, (index) {
-                          final isTouched = index == touchedIndex;
-                          final section = reversedData[index];
-                          final double radius = isTouched
-                              ? touchedRadius
-                              : baseRadius;
+      int? touchedIndex;
 
-                          return PieChartSectionData(
-                            color: section.color,
-                            value: section.value.toDouble(),
-                            title: '',
-                            radius: radius,
-                          );
-                        }),
-                      ),
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeInOutCubic,
-                    ),
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return Column(
+            children: [
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 100,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final size = constraints.biggest.shortestSide;
+                    final baseRadius = size / 4;
+                    final touchedRad = size / 3;
+                    final centerRadius = size / 3;
 
-                    // Center Label
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
+                    return Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Text(
-                          (touchedIndex != null &&
-                                  touchedIndex! >= 0 &&
-                                  touchedIndex! < reversedData.length)
-                              ? '${reversedData[touchedIndex!].value}%'
-                              : '$totalValue%',
-                          style: TextStyle(
-                            fontSize: size / 10,
-                            fontWeight: FontWeight.bold,
+                        PieChart(
+                          PieChartData(
+                            centerSpaceRadius: centerRadius,
+                            sectionsSpace: 2,
+                            startDegreeOffset: -90,
+                            pieTouchData: PieTouchData(
+                              touchCallback: (event, response) {
+                                setState(() {
+                                  final i = response
+                                      ?.touchedSection
+                                      ?.touchedSectionIndex;
+                                  touchedIndex = (i != null && i >= 0)
+                                      ? i
+                                      : null;
+                                });
+                              },
+                            ),
+                            sections: List.generate(chartData.length, (i) {
+                              final s = chartData[i];
+                              final isTouched = i == touchedIndex;
+                              return PieChartSectionData(
+                                color: s.color,
+                                value: s.value.toDouble(),
+                                title: '',
+                                radius: isTouched ? touchedRad : baseRadius,
+                              );
+                            }),
                           ),
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeInOutCubic,
                         ),
-                        Text(
-                          touchedIndex != null
-                              ? reversedData[touchedIndex!].label
-                              : 'Total',
-                          style: TextStyle(
-                            fontSize: size / 14,
-                            color: Colors.grey,
-                          ),
+
+                        // Center label shows percent (100% when complete)
+                        Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$percent%',
+                              style: TextStyle(
+                                fontSize: size / 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              touchedIndex == 0
+                                  ? 'Done'
+                                  : touchedIndex == 1
+                                  ? 'Target'
+                                  : 'Total',
+                              style: TextStyle(
+                                fontSize: size / 14,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
 
-          // Legend
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 16,
-            runSpacing: 10,
-            children: data.map((section) {
-              return Column(
-                children: [
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+              // Legend uses legendData (so "Target" shows targetVisit)
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 16,
+                runSpacing: 10,
+                children: legendData.map((s) {
+                  return Column(
                     children: [
-                      Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: section.color,
-                        ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 10,
+                            height: 10,
+                            decoration: BoxDecoration(
+                              color: s.color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            s.label,
+                            style: blackTextStyle.copyWith(fontSize: h6),
+                          ),
+                        ],
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(height: 8),
                       Text(
-                        section.label,
-                        style: blackTextStyle.copyWith(fontSize: h6),
+                        '${s.value}',
+                        style: blackTextStyle.copyWith(fontWeight: semiBold),
                       ),
                     ],
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '${section.value}',
-                    style: blackTextStyle.copyWith(fontWeight: semiBold),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-        ],
+                  );
+                }).toList(),
+              ),
+            ],
+          );
+        },
       );
     }
 
@@ -585,175 +592,190 @@ class _HomePageState extends State<HomePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: EdgeInsets.all(16),
-                      width: MediaQuery.of(context).size.width / 2.1,
-                      decoration: BoxDecoration(
-                        color: subtleGreyColor,
-                        border: BoxBorder.all(color: strokeColor),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Column(
-                        children: [
-                          Text(
-                            'Store Visit',
-                            style: blackTextStyle.copyWith(
-                              fontSize: h5,
-                              fontWeight: semiBold,
-                            ),
+                    BlocBuilder<DashboardBloc, DashboardState>(
+                      builder: (context, state) {
+                        final storeVisit = (state is DashboardLoaded)
+                            ? state.dashboard.storeVisitMonthly
+                            : null;
+
+                        return Container(
+                          padding: const EdgeInsets.all(16),
+                          width: MediaQuery.of(context).size.width / 2.1,
+                          decoration: BoxDecoration(
+                            color: subtleGreyColor,
+                            border: Border.all(color: strokeColor),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          SizedBox(height: 10),
-                          donutChart(),
-                        ],
-                      ),
+                          child: Column(
+                            children: [
+                              Text(
+                                'Store Visit',
+                                style: blackTextStyle.copyWith(
+                                  fontSize: h5,
+                                  fontWeight: semiBold,
+                                ),
+                              ),
+                              const SizedBox(height: 10),
+                              donutChart(storeVisit),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                    Column(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(16),
-                          width: MediaQuery.of(context).size.width / 2.4,
-                          decoration: BoxDecoration(
-                            color: subtleGreyColor,
-                            borderRadius: BorderRadius.circular(20),
-                            border: BoxBorder.all(color: strokeColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Activity',
-                                style: blackTextStyle.copyWith(
-                                  fontSize: h6,
-                                  fontWeight: semiBold,
-                                ),
+                    BlocBuilder<DashboardBloc, DashboardState>(
+                      builder: (context, state) {
+                        final todayActivities = (state is DashboardLoaded)
+                            ? state.dashboard.todayActivities
+                            : null;
+                        return Column(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(16),
+                              width: MediaQuery.of(context).size.width / 2.4,
+                              decoration: BoxDecoration(
+                                color: subtleGreyColor,
+                                borderRadius: BorderRadius.circular(20),
+                                border: BoxBorder.all(color: strokeColor),
                               ),
-                              SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Attendance',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                    ),
-                                  ),
-                                  Text(
-                                    '7',
+                                    'Activity',
                                     style: blackTextStyle.copyWith(
                                       fontSize: h6,
                                       fontWeight: semiBold,
                                     ),
                                   ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Attendance',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                        ),
+                                      ),
+                                      Text(
+                                        '7',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                          fontWeight: semiBold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Pricing',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                        ),
+                                      ),
+                                      Text(
+                                        todayActivities?.totalPricing ?? '0',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                          fontWeight: semiBold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Stock',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                        ),
+                                      ),
+                                      Text(
+                                        todayActivities?.totalStock ?? '0',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                          fontWeight: semiBold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                              SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                            ),
+                            // SizedBox(height: 10),
+                            Spacer(),
+                            Container(
+                              padding: EdgeInsets.all(16),
+                              width: MediaQuery.of(context).size.width / 2.4,
+                              decoration: BoxDecoration(
+                                color: subtleGreyColor,
+                                borderRadius: BorderRadius.circular(20),
+                                border: BoxBorder.all(color: strokeColor),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Pricing',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                    ),
-                                  ),
-                                  Text(
-                                    '25',
+                                    'Survey',
                                     style: blackTextStyle.copyWith(
                                       fontSize: h6,
                                       fontWeight: semiBold,
                                     ),
                                   ),
-                                ],
-                              ),
-                              SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Stock',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                    ),
+                                  SizedBox(height: 10),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Instore',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                        ),
+                                      ),
+                                      Text(
+                                        '11',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                          fontWeight: semiBold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  Text(
-                                    '18',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                      fontWeight: semiBold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        // SizedBox(height: 10),
-                        Spacer(),
-                        Container(
-                          padding: EdgeInsets.all(16),
-                          width: MediaQuery.of(context).size.width / 2.4,
-                          decoration: BoxDecoration(
-                            color: subtleGreyColor,
-                            borderRadius: BorderRadius.circular(20),
-                            border: BoxBorder.all(color: strokeColor),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Survey',
-                                style: blackTextStyle.copyWith(
-                                  fontSize: h6,
-                                  fontWeight: semiBold,
-                                ),
-                              ),
-                              SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Instore',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                    ),
-                                  ),
-                                  Text(
-                                    '11',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                      fontWeight: semiBold,
-                                    ),
+                                  SizedBox(height: 8),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        'Expired',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                        ),
+                                      ),
+                                      Text(
+                                        '8',
+                                        style: blackTextStyle.copyWith(
+                                          fontSize: h6,
+                                          fontWeight: semiBold,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 8),
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Expired',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                    ),
-                                  ),
-                                  Text(
-                                    '8',
-                                    style: blackTextStyle.copyWith(
-                                      fontSize: h6,
-                                      fontWeight: semiBold,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                            ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),

@@ -16,6 +16,29 @@ class _StoreVisitZonationPageState extends State<StoreVisitZonationPage> {
   GoogleMapController? _mapController;
   LatLng? _currentLatLng;
   bool _isLoading = true;
+  late int type;
+  late String storeId;
+  late String storeName;
+  late String areaName;
+  late LatLng storeLocation;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args =
+        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
+    type = args['type'];
+    storeId = args['storeId'];
+    storeName = args['storeName'];
+    areaName = args['areaName'];
+    final storeLatitude = args['storeLatitude'];
+    final storeLongitude = args['storeLongitude'];
+    storeLocation = LatLng(
+      double.parse(storeLatitude),
+      double.parse(storeLongitude),
+    );
+    print('STORE LOCATION $storeLocation');
+  }
 
   @override
   void initState() {
@@ -70,9 +93,6 @@ class _StoreVisitZonationPageState extends State<StoreVisitZonationPage> {
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)!.settings.arguments as Map<String, dynamic>;
-    final type = args['type'];
     return Scaffold(
       appBar: Header(
         title: 'Store Visit ${type == 1 ? 'Check In' : 'Check Out'}',
@@ -103,7 +123,14 @@ class _StoreVisitZonationPageState extends State<StoreVisitZonationPage> {
                   Navigator.pushNamed(
                     context,
                     '/store-visit-photo',
-                    arguments: {'location': _currentLatLng, 'type': type},
+                    arguments: {
+                      'location': _currentLatLng,
+                      'type': type,
+                      'storeLocation': storeLocation,
+                      'storeId': storeId,
+                      'storeName': storeName,
+                      'areaName': areaName,
+                    },
                   );
                 },
                 text: 'Next',

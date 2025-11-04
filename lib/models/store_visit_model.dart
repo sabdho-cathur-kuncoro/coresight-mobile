@@ -4,7 +4,7 @@ class StoreVisitModel {
   dynamic month;
   dynamic year;
   dynamic totalVisit;
-  String? targetVisit;
+  dynamic targetVisit;
   dynamic percentase;
   String? storeId;
   String? filePhotoFile;
